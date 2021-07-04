@@ -164,6 +164,12 @@ CU_BOOL CU_assertImplementation(CU_BOOL bValue,
 
   ++f_run_summary.nAsserts;
   if (CU_FALSE == bValue) {
+
+  #define RED                  "\e[0;31m"
+  #define L_RED                "\e[1;31m"
+  #define NONE                 "\e[0m"
+  
+    fprintf(stdout, "\n                      %s:%u %s ["RED"fail"NONE"]", strFile, uiLine, strCondition);
     ++f_run_summary.nAssertsFailed;
     add_failure(&f_failure_list, &f_run_summary, CUF_AssertFailed,
                 uiLine, strCondition, strFile, f_pCurSuite, f_pCurTest);

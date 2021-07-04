@@ -45,6 +45,14 @@
 extern "C" {
 #endif
 
+
+CU_EXPORT void CU_console_if_run_all_tests(void);
+CU_EXPORT void CU_console_if_show_all_tests(void);
+CU_EXPORT void CU_console_if_run_suite(const char *suitname);
+CU_EXPORT void CU_console_if_run_suite_case(const char *suitname
+                                                    , const char *casename);
+
+
 CU_EXPORT void CU_console_run_tests(void);
 /**< Run registered CUnit tests using the console interface. */
 

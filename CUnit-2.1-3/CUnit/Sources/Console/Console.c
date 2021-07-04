@@ -104,6 +104,7 @@ static CU_ErrorCode select_suite(CU_pTestRegistry pRegistry, CU_pSuite* ppSuite)
 static void list_suites(CU_pTestRegistry pRegistry);
 static void list_tests(CU_pSuite pSuite);
 static void show_failures(void);
+static void show_suites(CU_pTestRegistry pRegistry);
 
 /*=================================================================
  *  Public Interface functions
@@ -139,6 +140,122 @@ void CU_console_run_tests(void)
     console_registry_level_run(NULL);
   }
 }
+
+void CU_console_if_run_all_tests(void)
+{
+    /*
+     *   To avoid user from cribbing about the output not coming onto
+     *   screen at the moment of SIGSEGV.
+     */
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
+    /*
+    fprintf(stdout, "\n\n     %s" CU_VERSION
+                      "\n             %s\n",
+                    _("CUnit - A Unit testing framework for C - Version "),
+                    _("http://cunit.sourceforge.net/"));
+    */
+    
+    if (NULL == CU_get_registry()) {
+      fprintf(stderr, "\n\n%s\n", _("FATAL ERROR - Test registry is not initialized."));
+      CU_set_error(CUE_NOREGISTRY);
+    }
+    else {
+      f_yes_width = strlen(_("Yes"));
+      f_no_width  = strlen(_("No"));
+    
+      CU_set_test_start_handler(console_test_start_message_handler);
+      CU_set_test_complete_handler(console_test_complete_message_handler);
+      CU_set_all_test_complete_handler(console_all_tests_complete_message_handler);
+      CU_set_suite_init_failure_handler(console_suite_init_failure_message_handler);
+      CU_set_suite_cleanup_failure_handler(console_suite_cleanup_failure_message_handler);
+    
+      //console_registry_level_run(NULL);
+      console_run_all_tests(NULL);
+    }
+}
+
+void CU_console_if_show_all_tests(void)
+{
+    show_suites(NULL);
+}
+
+void CU_console_if_run_suite(const char *suitname)
+{
+    CU_pTestRegistry pRegistry = NULL;
+    CU_pSuite pSuite = NULL;
+
+    
+    pRegistry = CU_get_registry();
+    assert(pRegistry != NULL);
+    
+    if (0 == pRegistry->uiNumberOfSuites)
+    {
+      fprintf(stdout, "\n%s", _("No suites are registered."));
+      return;
+    }
+    
+    pSuite = CU_get_suite_by_name(suitname, pRegistry);
+    if (pSuite == NULL)
+    {
+      fprintf(stdout, _("find suites %s fail."), suitname);
+      return;
+    }
+
+    CU_set_test_start_handler(console_test_start_message_handler);
+    CU_set_test_complete_handler(console_test_complete_message_handler);
+    CU_set_all_test_complete_handler(console_all_tests_complete_message_handler);
+    CU_set_suite_init_failure_handler(console_suite_init_failure_message_handler);
+    CU_set_suite_cleanup_failure_handler(console_suite_cleanup_failure_message_handler);
+
+    console_run_suite(pSuite);
+
+}
+
+
+void CU_console_if_run_suite_case(const char *suitname
+                                          , const char *casename)
+{
+    CU_pTestRegistry pRegistry = NULL;
+    CU_pSuite pSuite = NULL;
+    CU_pTest pTest = NULL;
+
+    
+    pRegistry = CU_get_registry();
+    assert(pRegistry != NULL);
+    
+    if (0 == pRegistry->uiNumberOfSuites)
+    {
+      fprintf(stdout, "\n%s", _("No suites are registered."));
+      return;
+    }
+    
+    pSuite = CU_get_suite_by_name(suitname, pRegistry);
+    if (pSuite == NULL)
+    {
+      fprintf(stdout, _("find suites %s fail."), suitname);
+      return;
+    }
+
+    pTest = CU_get_test_by_name(casename, pSuite);
+    if (pTest == NULL)
+    {
+      fprintf(stdout, _("find case %s.%s fail."), suitname, casename);
+      return;
+    }
+
+    CU_set_test_start_handler(console_test_start_message_handler);
+    CU_set_test_complete_handler(console_test_complete_message_handler);
+    CU_set_all_test_complete_handler(console_all_tests_complete_message_handler);
+    CU_set_suite_init_failure_handler(console_suite_init_failure_message_handler);
+    CU_set_suite_cleanup_failure_handler(console_suite_cleanup_failure_message_handler);
+
+    (void) console_run_single_test(pSuite, pTest);
+
+    return;
+}
+
 
 /*=================================================================
  *  Static function implementation
@@ -467,6 +584,41 @@ static CU_ErrorCode select_suite(CU_pTestRegistry pRegistry, CU_pSuite* ppSuite)
   return (NULL != *ppSuite) ? CUE_SUCCESS : CUE_NOSUITE;
 }
 
+static void show_suites(CU_pTestRegistry pRegistry)
+{
+    CU_pSuite pCurSuite = NULL;
+    CU_pTest pCurTest = NULL;
+    unsigned int uiCount;
+    int i = 1, j = 1;
+
+    if (NULL == pRegistry) {
+      pRegistry = CU_get_registry();
+    }
+    
+    assert(NULL != pRegistry);
+    if (0 == pRegistry->uiNumberOfSuites) {
+      fprintf(stdout, "\n%s\n", _("No suites are registered."));
+      return;
+    }
+    
+    assert(NULL != pRegistry->pSuite);
+    
+    for (pCurSuite = pRegistry->pSuite; (NULL != pCurSuite); pCurSuite = pCurSuite->pNext, ++i) {
+      assert(NULL != pCurSuite->pName);
+      fprintf(stdout, "%d) %s\n", i, pCurSuite->pName);
+
+      for (uiCount = 1, pCurTest = pCurSuite->pTest ;
+           NULL != pCurTest ;
+           ++j, uiCount++, pCurTest = pCurTest->pNext) {
+        assert(NULL != pCurTest->pName);
+        fprintf(stdout, "  %d) %s\n", j, pCurTest->pName);
+      }
+    }
+
+    fprintf(stdout, "\n");
+}
+
+
 /*------------------------------------------------------------------------*/
 /**
  *  Lists the suites in a registry to standard output.
@@ -662,8 +814,8 @@ static void console_all_tests_complete_message_handler(const CU_pFailureRecord p
 {
   CU_UNREFERENCED_PARAMETER(pFailure); /* not used in console interface */
   printf("\n\n");
-  CU_print_run_results(stdout);
-  printf("\n");
+  //CU_print_run_results(stdout);
+  //printf("\n");
 }
 
 /*------------------------------------------------------------------------*/

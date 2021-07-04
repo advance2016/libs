@@ -21,3 +21,6 @@ chmod +x configure
 ./configure --prefix=$INSTALL_PATH
 make
 make install
+
+cp -rf "$INSTALL_PATH"/include/CUnit "$PWD_PATH"/../include
+cp -f "$INSTALL_PATH"/lib/libcunit* /usr/lib64/
